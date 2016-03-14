@@ -11,7 +11,7 @@ class ConvolutionLayer(object):
         self.pooling = pooling_size
         self.random_state = random_state
         self.input_dim = np.prod(filter_shape[1:])
-        self.output_dim = filter_shape[0] * np.prod(filter_shape[2:]) / np.prod(self.pooling)
+        self.output_dim = filter_shape[0] * np.prod(filter_shape[2:]) // np.prod(self.pooling)
         self.filter_shape = filter_shape
         self.W, self.bias = self.initialize_weights()
 
@@ -27,7 +27,7 @@ class ConvolutionLayer(object):
     def initialize_weights(self):
          w_values = np.asarray(
              self.random_state.uniform(-np.sqrt(6.0 / (self.input_dim + self.output_dim)),
-                                       -np.sqrt(6.0 / (self.input_dim + self.output_dim)),
+                                       np.sqrt(6.0 / (self.input_dim + self.output_dim)),
                                        self.filter_shape)
              , dtype=theano.config.floatX)
 

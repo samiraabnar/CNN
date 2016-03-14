@@ -11,16 +11,17 @@ from CNN.src.HiddenLayer import *
 from CNN.src.LogisticRegression import *
 
 
-rng = np.random.RandomState(12744)
+rng = np.random.RandomState(23455)
 
 
-class CNN(object):
+class ConvolutionalNetwork(object):
 
-    def __init__(self, batch_size,input_shape= (1,96,96),numbers_of_feature_maps=[3,2],filter_shape=(5,5), pooling_size=(2, 2),output_size=10):
+    def __init__(self, batch_size,input_shape= (1,96,96),numbers_of_feature_maps=[1,50,20],filter_shape=(5,5), pooling_size=(2, 2),output_size=10, learning_rate=0.1):
         self.input_shape = input_shape
         self.numbers_of_feature_maps = numbers_of_feature_maps
         self.filter_shape = filter_shape
         self.pooling_size = pooling_size
+        self.learning_rate = learning_rate
 
         self.output_size = output_size
         self.batch_size = batch_size
@@ -34,8 +35,8 @@ class CNN(object):
 
         self.image_shape[0] = (self.input_shape[1],self.input_shape[2])
         for i in np.arange(1,len(self.image_shape),1):
-            self.image_shape[i][0] = ((self.image_shape[i-1][0] - self.filter_shape[0] + 2*self.zero_padding)/ self.stride) + 1
-            self.image_shape[i][1] = ((self.image_shape[i-1][1] - self.filter_shape[0] + 2*self.zero_padding)/ self.stride) + 1
+            self.image_shape[i][0] = (((self.image_shape[i-1][0] - self.filter_shape[0] + 2*self.zero_padding)/ self.stride) + 1) / self.pooling_size[0]
+            self.image_shape[i][1] = (((self.image_shape[i-1][1] - self.filter_shape[0] + 2*self.zero_padding)/ self.stride) + 1) / self.pooling_size[1]
 
     def test_convolution(self):
         """
@@ -80,39 +81,43 @@ class CNN(object):
 
         layers = {}
         layers[0] = ConvolutionLayer(
-                    rng,
+                    random_state=rng,
                     input=input_layer,
-                    image_shape= (self.bach_size,self.numbers_of_feature_maps[0],self.image_shape[0][0],self.image_shape[0][1]),
-                    filter_shape = (self.numbers_of_feature_maps[1],self.numbers_of_feature_maps[0],self.filter_shape[0],self.filter_shape[1]),
-                    pooling_size = self.pooling_size
+                    image_shape=(self.batch_size,self.numbers_of_feature_maps[0],self.image_shape[0][0],self.image_shape[0][1]),
+                    filter_shape=(self.numbers_of_feature_maps[1],self.numbers_of_feature_maps[0],self.filter_shape[0],self.filter_shape[1]),
+                    pooling_size=self.pooling_size
 
         )
 
         layers[1] = ConvolutionLayer(
-                    rng,
+                    random_state = rng,
                     input=layers[0].output,
-                    image_shape= (self.batch_size, self.numbers_of_feature_maps[1],self.image_shape[1][0],self.image_shape[1][1]),
+                    image_shape = (self.batch_size, self.numbers_of_feature_maps[1],self.image_shape[1][0],self.image_shape[1][1]),
                     filter_shape = (self.numbers_of_feature_maps[2],self.numbers_of_feature_maps[1],self.filter_shape[0],self.filter_shape[1]),
                     pooling_size = self.pooling_size
 
         )
 
         layers[2] = HiddenLayer(
-                    rng,
+                    random_state=rng,
                     input=layers[1].output.flatten(2),
-                    n_in= self.numbers_of_feature_maps[2] * self.image_shape[2][0] * self.image_shape[2][1],
-                    n_out=self.batch_size,
+                    input_dim=self.numbers_of_feature_maps[2] * self.image_shape[2][0] * self.image_shape[2][1],
+                    output_dim=500,
                     activation=T.tanh
         )
 
-        layers[3] = LogisticRegression(input=layers[2].output, n_in=layers[2].n_out, n_out=self.output_size)
+        layers[3] = LogisticRegression(input=layers[2].output, input_dim=layers[2].output_dim, output_dim=self.output_size)
 
-        cost = layers[3].negative_log_likrlihood(y)
-
+        cost = layers[3].negative_log_likelihood(y)
+        error = layers[3].errors(y)
+        self.predictions = layers[3].predictions
         all_params = layers[3].params + layers[2].params + layers[1].params + layers[0].params
 
         grads = T.grad(cost, all_params)
 
         updates = [(param_i, param_i - self.learning_rate * grad_i) for param_i,grad_i in zip(all_params,grads)]
 
-        self.sgd_step = theano.function([x,y], [], updates=updates)
+        self.sgd_step = theano.function([x,y], [cost], updates=updates)
+
+        self.test_model = theano.function([x,y], error)
+        self.predict_class = theano.function([x], self.predictions)

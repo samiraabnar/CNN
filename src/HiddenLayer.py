@@ -10,9 +10,11 @@ class HiddenLayer(object):
         self.random_state = random_state
         self.activation = activation
 
-        self.W, self.bias = self.initialize_weights(W, bias)
 
-        linear_output = T.dot(input, self.W) + self.bias
+        self.W, self.bias = self.initialize_weights(W, bias)
+        self.params = [self.W,self.bias]
+
+        linear_output = T.dot(input,self.W) + self.bias
         if activation is None:
             self.output = linear_output
         else:
@@ -22,11 +24,11 @@ class HiddenLayer(object):
         if W is None:
             w_values = np.asarray(
                 self.random_state.uniform(-np.sqrt(6.0 / (self.input_dim + self.output_dim)),
-                                     -np.sqrt(6.0 / (self.input_dim + self.output_dim)),
-                                     (self.input_dim, self.output_dim))
+                                     np.sqrt(6.0 / (self.input_dim + self.output_dim)),
+                                     (self.input_dim,self.output_dim))
                 , dtype=theano.config.floatX)
 
-            if self.activation == theano.tensot.nnet.sigmoid:
+            if self.activation == theano.tensor.nnet.sigmoid:
                 w_values *= 4
 
             W = theano.shared(value=w_values, name="W", borrow="True")
