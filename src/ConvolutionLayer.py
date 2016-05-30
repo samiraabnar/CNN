@@ -2,7 +2,7 @@ import theano
 import theano.tensor as T
 from theano.tensor.nnet import conv
 import numpy as np
-from theano.tensor.signal import downsample
+from theano.tensor.signal import pool
 
 
 class ConvolutionLayer(object):
@@ -16,7 +16,7 @@ class ConvolutionLayer(object):
         self.W, self.bias = self.initialize_weights()
 
         conv_out = conv.conv2d(input=input,filters=self.W,filter_shape=filter_shape,image_shape=image_shape)
-        pooled_out = downsample.max_pool_2d(input=conv_out, ds=pooling_size, ignore_border=True)
+        pooled_out = pool.pool_2d(input=conv_out, ds=pooling_size, ignore_border=True)
 
         self.output = T.tanh(pooled_out + self.bias.dimshuffle('x',0,'x','x'))
         self.params = [self.W, self.bias]

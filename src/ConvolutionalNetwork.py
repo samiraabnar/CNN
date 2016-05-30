@@ -2,7 +2,7 @@ import theano
 import theano.tensor as T
 import numpy as np
 from theano.tensor.nnet import conv
-from theano.tensor.signal import downsample
+from theano.tensor.signal import pool
 import sys
 sys.path.append('../../')
 
@@ -61,7 +61,7 @@ class ConvolutionalNetwork(object):
         #Colvolution
 
         self.convolution = conv.conv2d(self.input,self.W)
-        self.max_pooling = downsample.max_pool_2d(
+        self.max_pooling = pool.pool_2d(
             input=self.convolution,
             ds=self.pooling_size,
             ignore_border=True
@@ -79,8 +79,8 @@ class ConvolutionalNetwork(object):
 
         input_layer = x.reshape((self.batch_size, 1, self.image_shape[0][0], self.image_shape[0][1]))
 
-        layers = {}
-        layers[0] = ConvolutionLayer(
+        self.layers = {}
+        self.layers[0] = ConvolutionLayer(
                     random_state=rng,
                     input=input_layer,
                     image_shape=(self.batch_size,self.numbers_of_feature_maps[0],self.image_shape[0][0],self.image_shape[0][1]),
@@ -89,29 +89,29 @@ class ConvolutionalNetwork(object):
 
         )
 
-        layers[1] = ConvolutionLayer(
+        self.layers[1] = ConvolutionLayer(
                     random_state = rng,
-                    input=layers[0].output,
+                    input=self.layers[0].output,
                     image_shape = (self.batch_size, self.numbers_of_feature_maps[1],self.image_shape[1][0],self.image_shape[1][1]),
                     filter_shape = (self.numbers_of_feature_maps[2],self.numbers_of_feature_maps[1],self.filter_shape[0],self.filter_shape[1]),
                     pooling_size = self.pooling_size
 
         )
 
-        layers[2] = HiddenLayer(
+        self.layers[2] = HiddenLayer(
                     random_state=rng,
-                    input=layers[1].output.flatten(2),
+                    input=self.layers[1].output.flatten(2),
                     input_dim=self.numbers_of_feature_maps[2] * self.image_shape[2][0] * self.image_shape[2][1],
                     output_dim=500,
                     activation=T.tanh
         )
 
-        layers[3] = LogisticRegression(input=layers[2].output, input_dim=layers[2].output_dim, output_dim=self.output_size)
+        self.layers[3] = LogisticRegression(input=self.layers[2].output, input_dim=self.layers[2].output_dim, output_dim=self.output_size)
 
-        cost = layers[3].negative_log_likelihood(y)
-        error = layers[3].errors(y)
-        self.predictions = layers[3].predictions
-        all_params = layers[3].params + layers[2].params + layers[1].params + layers[0].params
+        cost = self.layers[3].negative_log_likelihood(y)
+        error = self.layers[3].errors(y)
+        self.predictions = self.layers[3].predictions
+        all_params = self.layers[3].params + self.layers[2].params + self.layers[1].params + self.layers[0].params
 
         grads = T.grad(cost, all_params)
 
@@ -121,3 +121,4 @@ class ConvolutionalNetwork(object):
 
         self.test_model = theano.function([x,y], error)
         self.predict_class = theano.function([x], self.predictions)
+        self.get_visulization_data = theano.function([x], [self.layers[2].output,self.predictions])

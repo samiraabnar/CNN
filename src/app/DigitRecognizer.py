@@ -23,7 +23,7 @@ class DigitRecognizer(object):
 
     def train_model(self):
         self.model.build_model()
-        epochs = 5
+        epochs = 1
 
         for epoch in range(epochs):
             # For each training example...
@@ -43,6 +43,12 @@ class DigitRecognizer(object):
             print(test_cost)
             print("train cost: ")
             print(train_cost)
+
+            for i in np.arange(int(self.number_of_batches_in_test)):
+                features, predictions = self.model.get_visualization_data(self.test_x[i*self.batch_size:(i+1)*self.batch_size].eval(),self.test_y[i*self.batch_size:(i+1)*self.batch_size].eval())
+                print(features.shape)
+                print(predictions.shape)
+
 
     def step_by_step(self):
         self.model.build_model()
