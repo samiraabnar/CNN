@@ -121,4 +121,4 @@ class ConvolutionalNetwork(object):
 
         self.test_model = theano.function([x,y], error)
         self.predict_class = theano.function([x], self.predictions)
-        self.get_visulization_data = theano.function([x], [self.layers[2].output,self.predictions])
+        self.get_visualization_data = theano.function([x], [self.layers[2].output,self.predictions])

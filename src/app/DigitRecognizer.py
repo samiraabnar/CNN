@@ -1,6 +1,10 @@
+from matplotlib import offsetbox
+from sklearn import manifold
+
 import numpy as np
 import sys
 sys.path.append('../../../')
+import matplotlib.pyplot as plt
 
 
 from Util.util.data.DataPrep import *
@@ -44,11 +48,59 @@ class DigitRecognizer(object):
             print("train cost: ")
             print(train_cost)
 
+            vis_features = []
+            vis_predictions = []
+            vis_classes = []
             for i in np.arange(int(self.number_of_batches_in_test)):
-                features, predictions = self.model.get_visualization_data(self.test_x[i*self.batch_size:(i+1)*self.batch_size].eval(),self.test_y[i*self.batch_size:(i+1)*self.batch_size].eval())
+                features, predictions = self.model.get_visualization_data(self.test_x[i*self.batch_size:(i+1)*self.batch_size].eval())
                 print(features.shape)
                 print(predictions.shape)
+                vis_features.extend(features)
+                vis_predictions.extend(predictions)
+                vis_classes.extend(self.test_y[i*self.batch_size:(i+1)*self.batch_size].eval())
 
+            x = np.asarray(vis_features)
+            y = np.asarray(vis_classes)
+            n_samples, n_features = x.shape
+
+            print("Computing t-SNE embedding")
+            tsne = manifold.TSNE(n_components=2, init='pca', random_state=0)
+            X_tsne = tsne.fit_transform(x)
+
+            DigitRecognizer.plot_embedding(X_tsne,y,np.asarray(vis_predictions),
+                           "t-SNE embedding of the embedded digits")
+
+            plt.show()
+
+    # Scale and visualize the embedding vectors
+    @staticmethod
+    def plot_embedding(X,features,targets,classes, title=None):
+        x_min, x_max = np.min(X, 0), np.max(X, 0)
+        X = (X - x_min) / (x_max - x_min)
+
+        plt.figure()
+        ax = plt.subplot(111)
+        for i in range(X.shape[0]):
+            plt.text(X[i, 0], X[i, 1], str(targets[i]),
+                     color=plt.cm.Set1(classes[i] / 10.),
+                     fontdict={'weight': 'bold', 'size': 9})
+
+        if hasattr(offsetbox, 'AnnotationBbox'):
+            # only print thumbnails with matplotlib > 1.0
+            shown_images = np.array([[1., 1.]])  # just something big
+            for i in range(features.shape[0]):
+                dist = np.sum((X[i] - shown_images) ** 2, 1)
+                if np.min(dist) < 4e-3:
+                    # don't show points that are too close
+                    continue
+                shown_images = np.r_[shown_images, [X[i]]]
+                """imagebox = offsetbox.AnnotationBbox(
+                    offsetbox.OffsetImage(digits.images[i], cmap=plt.cm.gray_r),
+                    X[i])
+                ax.add_artist(imagebox)"""
+        plt.xticks([]), plt.yticks([])
+        if title is not None:
+            plt.title(title)
 
     def step_by_step(self):
         self.model.build_model()
